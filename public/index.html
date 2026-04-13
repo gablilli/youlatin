@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YouLatin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-theme="dark">
+    <main class="container">
+      <header class="topbar">
+        <div>
+          <h1>YouLatin</h1>
+          <p>Scraper latino/italiano: Olivetti + NihilScio</p>
+        </div>
+        <button id="themeToggle" class="btn btn-ghost" type="button">🌗 Tema</button>
+      </header>
+
+      <section class="panel">
+        <div class="row">
+          <label for="source">Fonte</label>
+          <select id="source" class="input">
+            <option value="olivetti">Dizionario Latino Olivetti</option>
+            <option value="nihilscio">NihilScio</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="query">Parola</label>
+          <input id="query" class="input" type="text" placeholder="Es. videbunt, puella" />
+        </div>
+
+        <div class="row" id="olivettiModeRow">
+          <label for="olivettiMode">Modalità Olivetti</label>
+          <select id="olivettiMode" class="input">
+            <option value="normal">Ricerca normale</option>
+            <option value="ft">A tutto testo (md=ft)</option>
+            <option value="ff">Forme flesse (md=ff)</option>
+          </select>
+        </div>
+
+        <div class="row hidden" id="nihilLangRow">
+          <label for="nihilLang">Direzione NihilScio</label>
+          <select id="nihilLang" class="input">
+            <option value="IT_">Latino → Italiano (IT_)</option>
+            <option value="LA_">Italiano → Latino (LA_)</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button id="searchBtn" class="btn" type="button">Cerca</button>
+          <button id="clearBtn" class="btn btn-ghost" type="button">Pulisci</button>
+        </div>
+      </section>
+
+      <section class="panel output">
+        <div id="status" class="status">Pronto.</div>
+        <pre id="result" class="result"></pre>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
