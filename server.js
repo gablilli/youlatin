@@ -203,5 +203,5 @@ app.get("/api/nihilscio", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`YouLatin running on http://localhost:${PORT}`);
+  console.log(`youlatin running on http://localhost:${PORT}`);
 });
