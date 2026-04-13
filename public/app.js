@@ -75,9 +75,8 @@ function clearOutput() {
 
 function applySavedTheme() {
   const saved = localStorage.getItem("youlatin-theme");
-  if (saved === "light" || saved === "dark") {
-    document.body.dataset.theme = saved;
-  }
+  const theme = saved === "light" || saved === "dark" ? saved : "dark";
+  document.body.dataset.theme = theme;
 }
 
 themeToggle.addEventListener("click", () => {

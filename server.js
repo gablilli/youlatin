@@ -8,6 +8,10 @@ const OLI_URL = "https://www.dizionario-latino.com/dizionario-latino-italiano.ph
 const OLI_FLESSIONE_URL = "https://www.dizionario-latino.com/dizionario-latino-flessione.php";
 const NIHIL_URL = "https://www.nihilscio.it/Manuali/Lingua%20latina/Verbi/Coniugazione_latino.aspx";
 const FETCH_TIMEOUT_MS = 15000;
+const MAX_QUERY_LENGTH = 120;
+const MAX_OLIVETTI_LINES = 120;
+const MAX_NIHILSCIO_LINES = 140;
+const MAX_PREVIEW_CHARS = 4500;
 
 app.use(express.static("public"));
 
@@ -24,7 +28,7 @@ function safeWord(input) {
     return "";
   }
 
-  return input.trim().slice(0, 120);
+  return input.trim().slice(0, MAX_QUERY_LENGTH);
 }
 
 function toAbsolute(baseUrl, href) {
@@ -46,7 +50,7 @@ async function fetchHtml(url) {
   });
 
   if (!response.ok) {
-    throw new Error(`Upstream HTTP ${response.status}`);
+    throw new Error(`Failed to fetch ${url}: HTTP ${response.status} ${response.statusText}`);
   }
 
   return response.text();
@@ -73,14 +77,14 @@ function parseOlivetti(html, sourceUrl) {
       .map((_, el) => $(el).text())
       .get()
       .filter((line) => normalizeText(line).length > 2)
-  ).slice(0, 120);
+  ).slice(0, MAX_OLIVETTI_LINES);
 
   return {
     title: normalizeText($("title").text()),
     declensionLinks,
     permalinkCandidates,
     resultLines,
-    bodyPreview: bodyText.slice(0, 4500),
+    bodyPreview: bodyText.slice(0, MAX_PREVIEW_CHARS),
   };
 }
 
@@ -93,7 +97,7 @@ function parseNihilScio(html, sourceUrl) {
       .map((_, el) => $(el).text())
       .get()
       .filter((line) => normalizeText(line).length > 2)
-  ).slice(0, 140);
+  ).slice(0, MAX_NIHILSCIO_LINES);
 
   const links = compactUnique(
     $("a[href]")
@@ -106,7 +110,7 @@ function parseNihilScio(html, sourceUrl) {
     title: normalizeText($("title").text()),
     details,
     links,
-    bodyPreview: bodyText.slice(0, 4500),
+    bodyPreview: bodyText.slice(0, MAX_PREVIEW_CHARS),
   };
 }
 
@@ -199,6 +203,5 @@ app.get("/api/nihilscio", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
   console.log(`YouLatin running on http://localhost:${PORT}`);
 });
