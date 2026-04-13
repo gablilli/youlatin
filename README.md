@@ -19,3 +19,11 @@ Poi apri `http://localhost:3000`.
 - `GET /api/olivetti?word=videbunt&mode=normal|ft|ff`
 - `GET /api/olivetti/declension?lemma=VIDEO100`
 - `GET /api/nihilscio?word=videbunt&lang=IT_|LA_`
+
+## Deploy su Vercel
+
+Gli endpoint API sono anche esposti come funzioni serverless in `api/`, quindi su Vercel funzionano direttamente:
+
+- `/api/olivetti`
+- `/api/olivetti/declension`
+- `/api/nihilscio`
