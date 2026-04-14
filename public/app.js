@@ -15,7 +15,42 @@ function setStatus(text) {
 }
 
 function setResult(data) {
-  resultEl.textContent = JSON.stringify(data, null, 2);
+  resultEl.textContent = data;
+}
+
+function formatUserResult(data) {
+  if (!data || typeof data !== "object") {
+    return "Nessun risultato disponibile.";
+  }
+
+  const chunks = [];
+  const title = (data.title || "").trim();
+  const preview = (data.readablePreview || data.bodyPreview || "").trim();
+
+  if (title) {
+    chunks.push(title);
+  }
+
+  if (preview) {
+    chunks.push(preview);
+  }
+
+  if (!chunks.length && Array.isArray(data.resultLines) && data.resultLines.length) {
+    chunks.push(data.resultLines.slice(0, 25).join("\n"));
+  }
+
+  if (!chunks.length && Array.isArray(data.details) && data.details.length) {
+    chunks.push(data.details.slice(0, 25).join("\n"));
+  }
+
+  return chunks.length ? chunks.join("\n\n") : "Nessun risultato utile trovato.";
+}
+
+function formatErrorResult(data) {
+  if (data && typeof data.error === "string" && data.error.trim()) {
+    return data.error.trim();
+  }
+  return "Errore dalla fonte remota.";
 }
 
 function syncSourceUi() {
@@ -56,15 +91,15 @@ async function runSearch() {
 
     if (!response.ok) {
       setStatus("Errore dalla fonte remota.");
-      setResult(data);
+      setResult(formatErrorResult(data));
       return;
     }
 
     setStatus("Risultati ricevuti.");
-    setResult(data);
+    setResult(formatUserResult(data));
   } catch (error) {
     setStatus("Errore di rete.");
-    setResult({ error: error.message });
+    setResult(error.message || "Errore di rete.");
   }
 }
 
