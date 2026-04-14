@@ -177,6 +177,28 @@ p {
   gap: 8px;
 }
 
+.nihil-table-wrap {
+  overflow: auto;
+}
+
+.nihil-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93rem;
+  min-width: 640px;
+}
+
+.nihil-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+.nihil-table-heading-row {
+  font-weight: 700;
+  background: var(--surface);
+}
+
 .result-text,
 .result-error {
   white-space: pre-wrap;

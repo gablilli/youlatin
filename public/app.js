@@ -12,6 +12,10 @@ const nihilLangRow = document.querySelector("#nihilLangRow");
 const UI_MAX_DEFINITIONS_DISPLAY = 25;
 const UI_MAX_USAGES_DISPLAY = 40;
 const UI_MAX_DETAILS_DISPLAY = 40;
+const UI_MAX_NIHIL_SUMMARY_LINES = 12;
+const UI_MAX_NIHIL_GRAMMAR_LINES = 12;
+const UI_MAX_NIHIL_TABLES = 8;
+const UI_MAX_NIHIL_TABLE_ROWS = 120;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -95,6 +99,85 @@ function renderOlivettiResult(data) {
   }
 }
 
+function appendNihilTableBlock(block, index) {
+  if (!block || !Array.isArray(block.rows) || !block.rows.length) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.className = "result-section";
+
+  const heading = document.createElement("h3");
+  heading.className = "section-title";
+  heading.textContent = block.title || `Tabella ${index + 1}`;
+  section.appendChild(heading);
+
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "nihil-table-wrap";
+  const table = document.createElement("table");
+  table.className = "nihil-table";
+
+  const rows = block.rows.slice(0, UI_MAX_NIHIL_TABLE_ROWS);
+  const maxColumns = Math.max(1, ...rows.map((row) => row.length));
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    if (row.length === 1 && maxColumns > 1) {
+      const td = document.createElement("td");
+      td.colSpan = maxColumns;
+      td.className = "nihil-table-heading-row";
+      td.textContent = row[0];
+      tr.appendChild(td);
+    } else {
+      row.forEach((cellText) => {
+        const td = document.createElement("td");
+        td.textContent = cellText;
+        tr.appendChild(td);
+      });
+      for (let i = row.length; i < maxColumns; i += 1) {
+        const td = document.createElement("td");
+        td.textContent = "";
+        tr.appendChild(td);
+      }
+    }
+    table.appendChild(tr);
+  });
+
+  tableWrap.appendChild(table);
+  section.appendChild(tableWrap);
+  resultEl.appendChild(section);
+}
+
+function renderNihilScioResult(data) {
+  const summaryLines = Array.isArray(data.summaryLines) ? data.summaryLines.slice(0, UI_MAX_NIHIL_SUMMARY_LINES) : [];
+  const grammarDetails = Array.isArray(data.grammarDetails)
+    ? data.grammarDetails.slice(0, UI_MAX_NIHIL_GRAMMAR_LINES)
+    : [];
+  const tableBlocks = Array.isArray(data.tableBlocks) ? data.tableBlocks.slice(0, UI_MAX_NIHIL_TABLES) : [];
+
+  const header = document.createElement("header");
+  header.className = "result-header";
+
+  const lemmaTitle = document.createElement("h2");
+  lemmaTitle.className = "lemma-title";
+  lemmaTitle.textContent = (data.query || "NihilScio").trim();
+  header.appendChild(lemmaTitle);
+
+  const subtitle = document.createElement("p");
+  subtitle.className = "lemma-meta";
+  subtitle.textContent = "NihilScio: traduzione, analisi e tabelle";
+  header.appendChild(subtitle);
+
+  resultEl.appendChild(header);
+  appendListSection("Risultato trovato", summaryLines);
+  appendListSection("Dettagli grammaticali", grammarDetails);
+  tableBlocks.forEach((block, index) => appendNihilTableBlock(block, index));
+
+  if (!summaryLines.length && !grammarDetails.length && !tableBlocks.length) {
+    renderGenericResult(data);
+  }
+}
+
 function renderGenericResult(data) {
   const preview = (data.readablePreview || data.bodyPreview || "").trim();
   if (preview) {
@@ -126,6 +209,11 @@ function renderResult(data) {
 
   if (data.source === "olivetti" || data.source === "olivetti-declension") {
     renderOlivettiResult(data);
+    return;
+  }
+
+  if (data.source === "nihilscio") {
+    renderNihilScioResult(data);
     return;
   }
 
