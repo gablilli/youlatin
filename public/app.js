@@ -14,43 +14,117 @@ function setStatus(text) {
   statusEl.textContent = text;
 }
 
-function setResult(data) {
-  resultEl.textContent = data;
+function resetResult() {
+  resultEl.innerHTML = "";
 }
 
-function formatUserResult(data) {
-  if (!data || typeof data !== "object") {
-    return "Nessun risultato disponibile.";
+function appendTextBlock(text, className = "result-text") {
+  const block = document.createElement("div");
+  block.className = className;
+  block.textContent = text;
+  resultEl.appendChild(block);
+}
+
+function appendListSection(title, items) {
+  if (!Array.isArray(items) || !items.length) {
+    return;
   }
 
-  const chunks = [];
-  const title = (data.title || "").trim();
+  const section = document.createElement("section");
+  section.className = "result-section";
+
+  const heading = document.createElement("h3");
+  heading.className = "section-title";
+  heading.textContent = title;
+  section.appendChild(heading);
+
+  const list = document.createElement("ol");
+  list.className = "section-list";
+  items.forEach((item) => {
+    if (!item || !item.trim()) {
+      return;
+    }
+    const li = document.createElement("li");
+    li.textContent = item.trim();
+    list.appendChild(li);
+  });
+
+  if (list.children.length > 0) {
+    section.appendChild(list);
+    resultEl.appendChild(section);
+  }
+}
+
+function renderOlivettiResult(data) {
+  const lemma = (data.lemma || "").trim();
+  const paradigm = (data.paradigm || "").trim();
+  const grammar = (data.grammar || "").trim();
+  const definitions = Array.isArray(data.definitions) ? data.definitions.slice(0, 25) : [];
+  const usages = Array.isArray(data.usages) ? data.usages.slice(0, 40) : [];
+
+  const header = document.createElement("header");
+  header.className = "result-header";
+
+  const lemmaTitle = document.createElement("h2");
+  lemmaTitle.className = "lemma-title";
+  lemmaTitle.textContent = lemma || data.query || "Risultato";
+  header.appendChild(lemmaTitle);
+
+  const meta = [paradigm, grammar].filter(Boolean).join(" · ");
+  if (meta) {
+    const subtitle = document.createElement("p");
+    subtitle.className = "lemma-meta";
+    subtitle.textContent = meta;
+    header.appendChild(subtitle);
+  }
+
+  resultEl.appendChild(header);
+  appendListSection("Spiegazioni", definitions);
+  appendListSection("Usi, contesti e locuzioni", usages);
+
+  if (!definitions.length && !usages.length) {
+    appendTextBlock(
+      (data.readablePreview || data.bodyPreview || "Nessun risultato utile trovato.").trim(),
+      "result-text"
+    );
+  }
+}
+
+function renderGenericResult(data) {
   const preview = (data.readablePreview || data.bodyPreview || "").trim();
-
-  if (title) {
-    chunks.push(title);
-  }
-
   if (preview) {
-    chunks.push(preview);
+    appendTextBlock(preview, "result-text");
+    return;
   }
 
-  if (!chunks.length && Array.isArray(data.resultLines) && data.resultLines.length) {
-    chunks.push(data.resultLines.slice(0, 25).join("\n"));
+  if (Array.isArray(data.details) && data.details.length) {
+    appendTextBlock(data.details.slice(0, 40).join("\n"), "result-text");
+    return;
   }
 
-  if (!chunks.length && Array.isArray(data.details) && data.details.length) {
-    chunks.push(data.details.slice(0, 25).join("\n"));
-  }
-
-  return chunks.length ? chunks.join("\n\n") : "Nessun risultato utile trovato.";
+  appendTextBlock("Nessun risultato utile trovato.", "result-text");
 }
 
-function formatErrorResult(data) {
-  if (data && typeof data.error === "string" && data.error.trim()) {
-    return data.error.trim();
+function renderErrorResult(data, fallbackMessage) {
+  const message =
+    data && typeof data.error === "string" && data.error.trim() ? data.error.trim() : fallbackMessage;
+  appendTextBlock(message, "result-error");
+}
+
+function renderResult(data) {
+  resetResult();
+
+  if (!data || typeof data !== "object") {
+    appendTextBlock("Nessun risultato disponibile.", "result-text");
+    return;
   }
-  return "Errore dalla fonte remota.";
+
+  if (data.source === "olivetti" || data.source === "olivetti-declension") {
+    renderOlivettiResult(data);
+    return;
+  }
+
+  renderGenericResult(data);
 }
 
 function syncSourceUi() {
@@ -83,7 +157,7 @@ async function runSearch() {
   }
 
   setStatus("Ricerca in corso…");
-  resultEl.textContent = "";
+  resetResult();
 
   try {
     const response = await fetch(url);
@@ -91,20 +165,20 @@ async function runSearch() {
 
     if (!response.ok) {
       setStatus("Errore dalla fonte remota.");
-      setResult(formatErrorResult(data));
+      renderErrorResult(data, "Errore dalla fonte remota.");
       return;
     }
 
     setStatus("Risultati ricevuti.");
-    setResult(formatUserResult(data));
+    renderResult(data);
   } catch (error) {
     setStatus("Errore di rete.");
-    setResult(error.message || "Errore di rete.");
+    renderErrorResult({ error: error.message }, "Errore di rete.");
   }
 }
 
 function clearOutput() {
-  resultEl.textContent = "";
+  resetResult();
   setStatus("Pronto.");
 }
 
