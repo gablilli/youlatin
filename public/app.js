@@ -16,6 +16,8 @@ const UI_MAX_NIHIL_SUMMARY_LINES = 12;
 const UI_MAX_NIHIL_GRAMMAR_LINES = 12;
 const UI_MAX_NIHIL_TABLES = 8;
 const UI_MAX_NIHIL_TABLE_ROWS = 120;
+const NIHIL_LATIN_PERSON_MARKERS = ["ego", "tu", "ille", "nos", "vos", "illi"];
+const NIHIL_ITALIAN_PERSON_MARKERS = ["Io", "Tu", "Egli/Ella/Esso", "Noi", "Voi", "Essi/Esse/Loro"];
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -60,6 +62,208 @@ function appendListSection(title, items) {
     section.appendChild(list);
     resultEl.appendChild(section);
   }
+}
+
+function appendKeyValueSection(title, pairs) {
+  const rows = Array.isArray(pairs) ? pairs.filter((pair) => pair && pair.label && pair.value) : [];
+  if (!rows.length) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.className = "result-section";
+
+  const heading = document.createElement("h3");
+  heading.className = "section-title";
+  heading.textContent = title;
+  section.appendChild(heading);
+
+  const list = document.createElement("dl");
+  list.className = "keyvalue-list";
+  rows.forEach((pair) => {
+    const dt = document.createElement("dt");
+    dt.textContent = pair.label;
+    const dd = document.createElement("dd");
+    dd.textContent = pair.value;
+    list.appendChild(dt);
+    list.appendChild(dd);
+  });
+
+  section.appendChild(list);
+  resultEl.appendChild(section);
+}
+
+function splitByMarkers(text, markers) {
+  if (!text) {
+    return [];
+  }
+  const escaped = markers.map((item) => item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`\\b(${escaped.join("|")})\\b`, "g");
+  const prepared = text.replace(/\s+/g, " ").trim();
+  const matches = [...prepared.matchAll(regex)];
+  if (!matches.length) {
+    return [prepared];
+  }
+
+  return matches.map((match, index) => {
+    const start = match.index;
+    const end = index + 1 < matches.length ? matches[index + 1].index : prepared.length;
+    return prepared.slice(start, end).trim();
+  });
+}
+
+function parseNihilSummary(line) {
+  if (!line || !line.trim()) {
+    return [];
+  }
+
+  const cleaned = line.replace(/\s+/g, " ").trim();
+  const entryMatch = cleaned.match(/^([^=]+)=\s*(.+?)\.\.\.\s*(.*)$/);
+  if (!entryMatch) {
+    return [{ label: "Dettaglio", value: cleaned }];
+  }
+
+  const term = entryMatch[1].trim();
+  const translation = entryMatch[2].trim();
+  const remainder = entryMatch[3].trim();
+  const grammarMatch = remainder.match(
+    /(INDICATIVO|CONGIUNTIVO|IMPERATIVO|INFINITO|PARTICIPIO|GERUNDIO|SUPINO|Sostantivo|Aggettivo|Pronome).*$/
+  );
+  let functionText = grammarMatch
+    ? remainder.slice(0, Math.max(0, grammarMatch.index)).replace(/[,\s]+$/g, "")
+    : remainder;
+  if (functionText.toLowerCase().startsWith(`${term.toLowerCase()} -`)) {
+    functionText = functionText.slice(term.length + 2).trim();
+  }
+  functionText = functionText.replace(/[-,\s]+$/g, "");
+  const grammarText = grammarMatch ? grammarMatch[0].trim() : "";
+
+  const pairs = [
+    { label: "Termine", value: term },
+    { label: "Traduzione", value: translation },
+  ];
+  if (functionText) {
+    pairs.push({ label: "Funzione / significati", value: functionText });
+  }
+  if (grammarText) {
+    pairs.push({ label: "Modo, tempo, persona o casi", value: grammarText });
+  }
+  return pairs;
+}
+
+function expandVerbPersons(row) {
+  if (!Array.isArray(row) || row.length !== 2) {
+    return null;
+  }
+  const latin = row[0];
+  const italian = row[1]
+    .replace(/(Io|Tu|Egli\/Ella\/Esso|Noi|Voi|Essi\/Esse\/Loro)/g, " $1")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!/\bego\b/i.test(latin) || !/\bIo\b/.test(italian)) {
+    return null;
+  }
+
+  const latinParts = splitByMarkers(latin, NIHIL_LATIN_PERSON_MARKERS);
+  const italianParts = splitByMarkers(italian, NIHIL_ITALIAN_PERSON_MARKERS);
+  const rows = [];
+  const labels = [
+    "1ª singolare",
+    "2ª singolare",
+    "3ª singolare",
+    "1ª plurale",
+    "2ª plurale",
+    "3ª plurale",
+  ];
+
+  for (let i = 0; i < Math.min(latinParts.length, italianParts.length, labels.length); i += 1) {
+    rows.push([labels[i], latinParts[i], italianParts[i]]);
+  }
+
+  return rows.length ? rows : null;
+}
+
+function expandNounCases(row) {
+  if (!Array.isArray(row) || row.length < 2) {
+    return null;
+  }
+
+  const singularLines = row[0].split("\n").map((line) => line.trim()).filter(Boolean);
+  const pluralLines = row[1].split("\n").map((line) => line.trim()).filter(Boolean);
+  const meaningLines = (row[2] || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const singularCases = singularLines
+    .map((line) => {
+      const match = line.match(/^(Nom\.|Gen\.|Dat\.|Acc\.|Voc\.|Abl\.)\s*(.+)$/);
+      if (!match) {
+        return null;
+      }
+      return { label: match[1], form: match[2] };
+    })
+    .filter(Boolean);
+
+  if (!singularCases.length || pluralLines.length < singularCases.length) {
+    return null;
+  }
+
+  return singularCases.map((item, index) => [
+    item.label,
+    item.form,
+    pluralLines[index] || "",
+    meaningLines[index] || "",
+  ]);
+}
+
+function expandNihilTableRows(rows) {
+  const expanded = [];
+  rows.forEach((row, idx) => {
+    if (!Array.isArray(row) || !row.length) {
+      return;
+    }
+
+    if (idx > 0) {
+      const verbRows = expandVerbPersons(row);
+      if (verbRows) {
+        if (!expanded.some((item) => Array.isArray(item) && item[0] === "Persona")) {
+          expanded.push(["Persona", "Forma latina", "Traduzione"]);
+        }
+        expanded.push(...verbRows);
+        return;
+      }
+
+      const nounRows = expandNounCases(row);
+      if (nounRows) {
+        if (!expanded.some((item) => Array.isArray(item) && item[0] === "Caso")) {
+          expanded.push(["Caso", "Singolare", "Plurale", "Uso/valore"]);
+        }
+        expanded.push(...nounRows);
+        return;
+      }
+    }
+
+    if (row.length === 1) {
+      row[0]
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => expanded.push([line]));
+      return;
+    }
+
+    expanded.push(
+      row.map((cell) =>
+        cell
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join(" · ")
+      )
+    );
+  });
+  return expanded;
 }
 
 function renderOlivettiResult(data) {
@@ -117,7 +321,7 @@ function appendNihilTableBlock(block, index) {
   const table = document.createElement("table");
   table.className = "nihil-table";
 
-  const rows = block.rows.slice(0, UI_MAX_NIHIL_TABLE_ROWS);
+  const rows = expandNihilTableRows(block.rows).slice(0, UI_MAX_NIHIL_TABLE_ROWS);
   const maxColumns = Math.max(1, ...rows.map((row) => row.length));
 
   rows.forEach((row) => {
@@ -129,8 +333,12 @@ function appendNihilTableBlock(block, index) {
       td.textContent = row[0];
       tr.appendChild(td);
     } else {
+      const isSchemaHeader = row[0] === "Persona" || row[0] === "Caso";
       row.forEach((cellText) => {
         const td = document.createElement("td");
+        if (isSchemaHeader) {
+          td.className = "nihil-table-col-heading";
+        }
         td.textContent = cellText;
         tr.appendChild(td);
       });
@@ -169,7 +377,9 @@ function renderNihilScioResult(data) {
   header.appendChild(subtitle);
 
   resultEl.appendChild(header);
-  appendListSection("Risultato trovato", summaryLines);
+  const summaryPairs = parseNihilSummary(summaryLines[0] || "");
+  appendKeyValueSection("Risultato trovato", summaryPairs);
+  appendListSection("Altri risultati trovati", summaryLines.slice(1));
   appendListSection("Dettagli grammaticali", grammarDetails);
   tableBlocks.forEach((block, index) => appendNihilTableBlock(block, index));
 

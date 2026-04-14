@@ -177,6 +177,22 @@ p {
   gap: 8px;
 }
 
+.keyvalue-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 8px 12px;
+}
+
+.keyvalue-list dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.keyvalue-list dd {
+  margin: 0;
+}
+
 .nihil-table-wrap {
   overflow: auto;
 }
@@ -195,6 +211,11 @@ p {
 }
 
 .nihil-table-heading-row {
+  font-weight: 700;
+  background: var(--surface);
+}
+
+.nihil-table-col-heading {
   font-weight: 700;
   background: var(--surface);
 }
