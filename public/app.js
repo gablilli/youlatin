@@ -9,6 +9,9 @@ const resultEl = document.querySelector("#result");
 const themeToggle = document.querySelector("#themeToggle");
 const olivettiModeRow = document.querySelector("#olivettiModeRow");
 const nihilLangRow = document.querySelector("#nihilLangRow");
+const UI_MAX_DEFINITIONS_DISPLAY = 25;
+const UI_MAX_USAGES_DISPLAY = 40;
+const UI_MAX_DETAILS_DISPLAY = 40;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -59,8 +62,10 @@ function renderOlivettiResult(data) {
   const lemma = (data.lemma || "").trim();
   const paradigm = (data.paradigm || "").trim();
   const grammar = (data.grammar || "").trim();
-  const definitions = Array.isArray(data.definitions) ? data.definitions.slice(0, 25) : [];
-  const usages = Array.isArray(data.usages) ? data.usages.slice(0, 40) : [];
+  const definitions = Array.isArray(data.definitions)
+    ? data.definitions.slice(0, UI_MAX_DEFINITIONS_DISPLAY)
+    : [];
+  const usages = Array.isArray(data.usages) ? data.usages.slice(0, UI_MAX_USAGES_DISPLAY) : [];
 
   const header = document.createElement("header");
   header.className = "result-header";
@@ -98,7 +103,7 @@ function renderGenericResult(data) {
   }
 
   if (Array.isArray(data.details) && data.details.length) {
-    appendTextBlock(data.details.slice(0, 40).join("\n"), "result-text");
+    appendTextBlock(data.details.slice(0, UI_MAX_DETAILS_DISPLAY).join("\n"), "result-text");
     return;
   }
 
