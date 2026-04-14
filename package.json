@@ -1,0 +1,26 @@
+{
+  "name": "youlatin",
+  "version": "1.0.0",
+  "description": "Latin dictionary scraper UI for Olivetti and NihilScio",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gablilli/youlatin.git"
+  },
+  "keywords": [],
+  "author": "gablilli",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/gablilli/youlatin/issues"
+  },
+  "homepage": "https://github.com/gablilli/youlatin#readme",
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1"
+  }
+}
